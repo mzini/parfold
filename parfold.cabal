@@ -1,0 +1,16 @@
+name:               ParFold
+version:            0.1
+synopsis:           Parallel folds
+description:        
+   Parallel folds with early aborts
+author:             Martin Avanzini
+maintainer:         martin.avanzini@uibk.ac.at
+license:            LGPL
+cabal-version:      >= 1.6
+build-type:	    Simple
+
+
+library
+ exposed-modules:   Control.Concurrent.PFold
+
+ build-depends:     base, parallel
