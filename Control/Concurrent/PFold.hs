@@ -10,7 +10,7 @@ import Control.Concurrent (forkIO, killThread)
 import Control.Parallel (pseq)
 import Control.Concurrent.MVar (takeMVar, putMVar, newEmptyMVar)
 
-data Return a = Finished a
+data Return a = Stop a
               | Continue a
 
 pfoldA :: (a -> b -> Return a) -> a -> [IO b] -> IO a
@@ -28,7 +28,7 @@ pfoldA f e ios = do
           collect mv (_:tids) a = 
               do b <- takeMVar mv
                  case f a b of 
-                   Finished r -> return r
+                   Stop r     -> return r
                    Continue r -> collect mv tids r
 
           killAll = mapM killThread
@@ -40,5 +40,5 @@ fastest :: a -> [IO a] -> IO a
 fastest = fastestSatisfying $ const True
 
 fastestSatisfying :: (a -> Bool) -> a -> [IO a] -> IO a
-fastestSatisfying f = pfoldA (\ a b -> if f b then Finished b else Continue a)
+fastestSatisfying f = pfoldA (\ a b -> if f b then Stop b else Continue a)
 
