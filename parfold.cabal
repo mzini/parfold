@@ -1,14 +1,20 @@
-name:               ParFold
-version:            0.1
-synopsis:           Parallel folds
-description:        
-   Parallel folds with early aborts
-author:             Martin Avanzini
-maintainer:         martin.avanzini@uibk.ac.at
-license:            LGPL
+Name:               parfold
+Version:            0.5
+Synopsis:           Parallel folds
+Description:        
+   Small but convenient abstraction for concurrent programming
+Author:             Martin Avanzini, 
+                    Georg Moser, 
+                    Andreas Schnabl
+Category:           Concurrency
+Maintainer:         Martin Avanzini <martin.avanzini@uibk.ac.at>
+Stability:          Experimental
+License:            LGPL
+License-file:       COPYING.LESSER
+Homepage:           http://cl-informatik.uibk.ac.at/software/tct/
+
 cabal-version:      >= 1.6
 build-type:	    Simple
-
 
 library
  exposed-modules:   Control.Concurrent.PFold
