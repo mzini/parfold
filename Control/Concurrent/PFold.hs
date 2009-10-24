@@ -1,3 +1,20 @@
+{-
+This file is part of the Haskell Parfold Library.
+
+The Haskell Parfold Library is free software: you can redistribute it and/or modify
+it under the terms of the GNU Lesser General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+The Haskell Parfold Library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License
+along with the Haskell Parfold Library.  If not, see <http://www.gnu.org/licenses/>.
+-}
+
 module Control.Concurrent.PFold 
  ( Return (..)
  , pfoldA
