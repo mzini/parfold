@@ -18,5 +18,5 @@ build-type:	    Simple
 
 library
  exposed-modules:   Control.Concurrent.PFold
-
- build-depends:     base, parallel, mtl, process
+                    Control.Concurrent.Utils
+ build-depends:     base>=4, parallel, mtl, process
