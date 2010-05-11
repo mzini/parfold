@@ -27,7 +27,7 @@ module Control.Concurrent.PFold
  , (<+>)
  , (<|>))
 where
-import Control.Concurrent (forkIO, killThread)
+import Control.Concurrent (forkOS, killThread)
 import Control.Parallel (pseq)
 import qualified Control.Exception as C
 import Control.Monad
@@ -42,7 +42,7 @@ pfoldA f e ios = do mv <- newEmptyMVar
                     tids <- mapM (spwn mv) ios
                     (collect mv tids e `C.finally` killAll tids)
                  
-    where spwn mv io = forkIO $ do b <- io
+    where spwn mv io = forkOS $ do b <- io
                                    pseq b (return ())
                                    putMVar mv b
 
