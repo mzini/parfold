@@ -13,7 +13,7 @@ import System.Exit	( ExitCode(..) )
 import Control.Monad (when)
 import qualified Control.Exception as C
 
-spawn :: String -> [String] -> String -> IO (Either String String)
+spawn :: String -> [String] -> String -> IO (Maybe (ExitCode, String))
 spawn cmd args input = 
     do (Just inh, Just outh, _, pid) <- createProcess (proc cmd args){ std_in  = CreatePipe,
                                                                       std_out = CreatePipe,
@@ -28,17 +28,18 @@ spawn cmd args input =
                                  takeMVar outMVar
                                  finalize inh outh
                                  ex <- waitForProcess pid
-                                 case ex of
-                                   ExitSuccess   -> return $ Right output
-                                   ExitFailure r -> return $ Left $ "UnixSignal(" ++ show r ++ ")"
+                                 return $ Just (ex, output)
+--                                 case ex of
+--                                   ExitSuccess   -> return $ Right output
+--                                   ExitFailure r -> return $ Left $ "UnixSignal(" ++ show r ++ ")"
 
           finalize inh outh = hClose inh >> hClose outh
-          
+
           catchErr inh outh pid ma = C.catchJust threadKilled ma handler
               where handler () = do terminateProcess pid
                                     waitForProcess pid
                                     finalize inh outh
-                                    return $ Left "ThreadKilled"
+                                    return Nothing
 
 timedKill :: Int -> IO a -> IO (Maybe a)
 timedKill n m = do pid <- myThreadId
