@@ -1,10 +1,10 @@
 Name:               parfold
 Version:            0.5
 Synopsis:           Parallel folds
-Description:        
+Description:
    Small but convenient abstraction for concurrent programming
-Author:             Martin Avanzini, 
-                    Georg Moser, 
+Author:             Martin Avanzini,
+                    Georg Moser,
                     Andreas Schnabl
 Category:           Concurrency
 Maintainer:         Martin Avanzini <martin.avanzini@uibk.ac.at>
@@ -18,5 +18,6 @@ build-type:	    Simple
 
 library
  exposed-modules:   Control.Concurrent.PFold
-
- build-depends:     base, parallel
+                    Control.Concurrent.Utils
+ build-depends:     base>=4, parallel, mtl, process
+ ghc-options:       -threaded -O2
