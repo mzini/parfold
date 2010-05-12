@@ -13,32 +13,32 @@ import System.Exit	( ExitCode(..) )
 import Control.Monad (when)
 import qualified Control.Exception as C
 
-spawn :: String -> [String] -> String -> IO (Maybe (ExitCode, String))
+spawn :: String -> [String] -> String -> IO (Maybe (ExitCode, String, String))
 spawn cmd args input = 
-    do (Just inh, Just outh, _, pid) <- createProcess (proc cmd args){ std_in  = CreatePipe,
-                                                                      std_out = CreatePipe,
-                                                                      std_err = Inherit }
-       catchErr inh outh pid (spwn inh outh pid)
-    where spwn inh outh pid = do output  <- hGetContents outh
-                                 outMVar <- newEmptyMVar
-                                 forkOS $ C.evaluate (length output) >> putMVar outMVar ()
+    do (Just inh, Just outh, Just errh, pid) <- createProcess (proc cmd args){ std_in  = CreatePipe,
+                                                                               std_out = CreatePipe,
+                                                                               std_err = CreatePipe }
+       catchErr inh outh errh pid (spwn inh outh errh pid)
+    where spwn inh outh errh pid = do output <- hGetContents outh
+                                      errors <- hGetContents errh
+                                      outMVar <- newEmptyMVar
+                                      forkOS $ C.evaluate (length output) >> putMVar outMVar ()
+                                      when (not (null input)) $ do hPutStr inh input; hFlush inh;
+                                      hClose inh
+                                      takeMVar outMVar
+                                      finalize inh outh errh
+                                      ex <- waitForProcess pid
+                                      return $ Just (ex, output, errors)
+--                                     case ex of
+--                                       ExitSuccess   -> return $ Right output
+--                                       ExitFailure r -> return $ Left $ "UnixSignal(" ++ show r ++ ")"
 
-                                 when (not (null input)) $ do hPutStr inh input; hFlush inh; 
-                                 hClose inh
-                                 takeMVar outMVar
-                                 finalize inh outh
-                                 ex <- waitForProcess pid
-                                 return $ Just (ex, output)
---                                 case ex of
---                                   ExitSuccess   -> return $ Right output
---                                   ExitFailure r -> return $ Left $ "UnixSignal(" ++ show r ++ ")"
+          finalize inh outh errh = hClose inh >> hClose outh >> hClose errh
 
-          finalize inh outh = hClose inh >> hClose outh
-
-          catchErr inh outh pid ma = C.catchJust threadKilled ma handler
+          catchErr inh outh errh pid ma = C.catchJust threadKilled ma handler
               where handler () = do terminateProcess pid
                                     waitForProcess pid
-                                    finalize inh outh
+                                    finalize inh outh errh
                                     return Nothing
 
 timedKill :: Int -> IO a -> IO (Maybe a)
