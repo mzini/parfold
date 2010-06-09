@@ -3,6 +3,7 @@ Version:            0.5
 Synopsis:           Parallel folds
 Description:
    Small but convenient abstraction for concurrent programming
+
 Author:             Martin Avanzini,
                     Georg Moser,
                     Andreas Schnabl
