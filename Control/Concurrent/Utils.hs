@@ -1,7 +1,8 @@
 module Control.Concurrent.Utils 
     ( spawn
     , threadKilled
-    , timedKill)
+    , timedKill
+    , solveList)
 where
 import Control.Concurrent (forkIO, forkOS, killThread, myThreadId, threadDelay)
 import Control.Concurrent.MVar (takeMVar, putMVar, newEmptyMVar)
