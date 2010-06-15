@@ -3,14 +3,16 @@ module Control.Concurrent.Utils
     , threadKilled
     , timedKill)
 where
-import System.Process
 import Control.Concurrent (forkIO, forkOS, killThread, myThreadId, threadDelay)
 import Control.Concurrent.MVar (takeMVar, putMVar, newEmptyMVar)
-import System.IO
-import System.IO.Error
+import Control.Concurrent.PFold (pfoldA, Return (..))
+import Control.Monad (foldM, when)
+import Control.Monad.Trans (liftIO)
 import Data.Typeable
 import System.Exit	( ExitCode(..) )
-import Control.Monad (when)
+import System.IO
+import System.IO.Error
+import System.Process
 import qualified Control.Exception as C
 
 spawn :: String -> [String] -> String -> IO (Maybe (ExitCode, String, String))
@@ -53,3 +55,17 @@ timedKill n m = do pid <- myThreadId
 threadKilled e = case C.fromException e of 
                    Just C.ThreadKilled -> Just ()
                    _ -> Nothing
+
+solveList :: Bool -> [IO (Return p)] -> IO (Either [p] [p])
+solveList par l = liftIO $ (if par then solvePar else solveSeq) l
+    where solveSeq = foldM comb (Right [])
+              where comb (Right ps) ms = do p' <- ms 
+                                            case p' of 
+                                              Stop     p -> return $ Left $ p:ps
+                                              Continue p -> return $ Right $ p:ps
+                    comb e          _  = return e
+
+          solvePar = pfoldA comb (Right [])
+              where comb (Right ps) (Continue p) = Continue $ Right $ p:ps 
+                    comb (Right ps) (Stop p)     = Stop $ Left (p:ps)
+                    comb _          _            = error "Processor: Captain, what happen?"
