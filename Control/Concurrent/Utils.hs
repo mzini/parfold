@@ -7,7 +7,7 @@ where
 import Control.Concurrent (forkIO, forkOS, killThread, myThreadId, threadDelay)
 import Control.Concurrent.MVar (takeMVar, putMVar, newEmptyMVar)
 import Control.Concurrent.PFold (pfoldA, Return (..))
-import Control.Monad (foldM, when)
+import Control.Monad (foldM, when, liftM)
 import Control.Monad.Trans (liftIO)
 import Data.Typeable
 import System.Exit	( ExitCode(..) )
@@ -21,11 +21,16 @@ spawn cmd args input = C.bracket createProc finalize run
     where createProc = do e <- createProcess (proc cmd args) { std_in  = CreatePipe,
                                                               std_out = CreatePipe,
                                                               std_err = CreatePipe }
-                          case e of (Just inh, Just outh, Just errh, pid) -> return (inh, outh, errh, pid)
+                          case e of (Just inh, Just outh, Just errh, pid) -> return (inh, outh, errh, pid) 
 
+          retrying d m = do s <- try $ m
+                            case s of 
+                              Left e -> (hPutStr stderr msg) >> retrying d m
+                                  where msg = "Control.Concurrent.Utils.spawn: Retrying " ++ d ++ "..."
+                              Right a -> return a
           finalize (inh, outh, errh, pid) = 
-              do terminateProcess pid
-                 _ <- waitForProcess pid
+              do _ <- retrying "terminate" $ terminateProcess pid
+                 _ <- retrying "wait" $ waitForProcess pid
                  hClose inh >> hClose outh >> hClose errh
                                                
           run (inh, outh, errh, pid) = 
@@ -47,7 +52,7 @@ timedKill n m = do pid <- myThreadId
                     (C.bracket 
                           (forkIO $ threadDelay n >> killThread pid)
                           killThread
-                          (const $ C.unblock m >>= return . Just))
+                          (const $ Just `liftM` m))
 
 threadKilled e = case C.fromException e of 
                    Just C.ThreadKilled -> Just ()
