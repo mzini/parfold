@@ -17,32 +17,28 @@ import System.Process
 import qualified Control.Exception as C
 
 spawn :: String -> [String] -> String -> IO (Maybe (ExitCode, String, String))
-spawn cmd args input = 
-    do (Just inh, Just outh, Just errh, pid) <- createProcess (proc cmd args){ std_in  = CreatePipe,
-                                                                               std_out = CreatePipe,
-                                                                               std_err = CreatePipe }
-       catchErr inh outh errh pid (spwn inh outh errh pid)
-    where spwn inh outh errh pid = do output <- hGetContents outh
-                                      errors <- hGetContents errh
-                                      outMVar <- newEmptyMVar
-                                      forkOS $ C.evaluate (length output) >> putMVar outMVar ()
-                                      when (not (null input)) $ do hPutStr inh input; hFlush inh;
-                                      hClose inh
-                                      takeMVar outMVar
-                                      finalize inh outh errh
-                                      ex <- waitForProcess pid
-                                      return $ Just (ex, output, errors)
---                                     case ex of
---                                       ExitSuccess   -> return $ Right output
---                                       ExitFailure r -> return $ Left $ "UnixSignal(" ++ show r ++ ")"
+spawn cmd args input = C.bracket createProc finalize run
+    where createProc = do e <- createProcess (proc cmd args) { std_in  = CreatePipe,
+                                                              std_out = CreatePipe,
+                                                              std_err = CreatePipe }
+                          case e of (Just inh, Just outh, Just errh, pid) -> return (inh, outh, errh, pid)
 
-          finalize inh outh errh = hClose inh >> hClose outh >> hClose errh
-
-          catchErr inh outh errh pid ma = C.catchJust threadKilled ma handler
-              where handler () = do terminateProcess pid
-                                    waitForProcess pid
-                                    finalize inh outh errh
-                                    return Nothing
+          finalize (inh, outh, errh, pid) = 
+              do terminateProcess pid
+                 _ <- waitForProcess pid
+                 hClose inh >> hClose outh >> hClose errh
+                                               
+          run (inh, outh, errh, pid) = 
+              do output <- hGetContents outh
+                 errors <- hGetContents errh
+                 outMVar <- newEmptyMVar
+                 forkOS $ C.evaluate (length output) >> putMVar outMVar ()
+                 when (not (null input)) $ do hPutStr inh input; hFlush inh;
+                 hClose inh
+                 takeMVar outMVar
+                 finalize (inh, outh, errh, pid)
+                 ex <- waitForProcess pid
+                 return $ Just (ex, output, errors)
 
 timedKill :: Int -> IO a -> IO (Maybe a)
 timedKill n m = do pid <- myThreadId

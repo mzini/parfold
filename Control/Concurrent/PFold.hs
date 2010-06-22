@@ -42,7 +42,7 @@ pfoldA f e ios = do mv <- newEmptyMVar
                     C.bracket
                          (mapM (spwn mv) ios)
                          killAll
-                         (collect mv  e)
+                         (collect mv e)
                  
     where spwn mv io = forkIO $ do b <- io
                                    pseq b (return ())
