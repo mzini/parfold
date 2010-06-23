@@ -44,9 +44,9 @@ pfoldA f e ios = do mv <- newEmptyMVar
                          killAll
                          (collect mv e)
                  
-    where spwn mv io = forkIO $ do b <- io
-                                   pseq b (return ())
-                                   putMVar mv b
+    where spwn mv io = C.unblock $ forkIO $ do b <- io
+                                               pseq b (return ())
+                                               putMVar mv b
 
           collect _  a  []       = return a
           collect mv a  (_:tids) = 

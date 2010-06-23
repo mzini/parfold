@@ -20,5 +20,6 @@ build-type:	    Simple
 library
  exposed-modules:   Control.Concurrent.PFold
                     Control.Concurrent.Utils
+                    Control.Concurrent.AbortThread
  build-depends:     base>=4, parallel, mtl, process
- ghc-options:       -threaded -O2
+ ghc-options:       -Wall -threaded -O2

@@ -9,7 +9,6 @@ import Control.Concurrent.MVar (takeMVar, putMVar, newEmptyMVar)
 import Control.Concurrent.PFold (pfoldA, Return (..))
 import Control.Monad (foldM, when, liftM)
 import Control.Monad.Trans (liftIO)
-import Data.Typeable
 import System.Exit	( ExitCode(..) )
 import System.IO
 import System.IO.Error
@@ -25,7 +24,7 @@ spawn cmd args input = C.bracket createProc finalize run
 
           retrying d m = do s <- try $ m
                             case s of 
-                              Left e -> (hPutStr stderr msg) >> retrying d m
+                              Left _ -> (hPutStr stderr msg) >> retrying d m
                                   where msg = "Control.Concurrent.Utils.spawn: Retrying " ++ d ++ "..."
                               Right a -> return a
           finalize (inh, outh, errh, pid) = 
