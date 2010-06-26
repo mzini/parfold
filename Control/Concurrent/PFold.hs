@@ -1,3 +1,4 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 {-
 This file is part of the Haskell Parfold Library.
 
@@ -28,7 +29,6 @@ module Control.Concurrent.PFold
  , (<|>))
 where
 import Control.Concurrent (forkIO, killThread)
-import Control.Parallel (pseq)
 import qualified Control.Exception as C
 import Control.Monad
 import System.IO
@@ -40,20 +40,21 @@ data Return a = Stop a
 pfoldA :: (a -> b -> Return a) -> a -> [IO b] -> IO a
 pfoldA f e ios = do mv <- newEmptyMVar 
                     C.bracket
-                         (mapM (spwn mv) ios)
+                         (mapM (spwn mv) ios) -- spawned children are blocked from asynchrounous exceptions, only the given io from ios is unblocked per child
                          killAll
                          (collect mv e)
-                 
-    where spwn mv io = C.unblock $ forkIO $ do b <- io
-                                               pseq b (return ())
-                                               putMVar mv b
+    where spwn mv io = forkIO $ do res <- Just `liftM` evalIO `C.catch` (\ (_ :: C.SomeException) -> return Nothing)
+                                   putMVar mv res
+              where evalIO = C.unblock $ io >>= C.evaluate
 
           collect _  a  []       = return a
           collect mv a  (_:tids) = 
-              do b <- takeMVar mv
-                 case f a b of 
-                   Stop r     -> return r
-                   Continue r -> collect mv r tids
+              do res <- takeMVar mv
+                 case res of 
+                   Just b  -> case f a b of 
+                               Stop r     -> return r
+                               Continue r -> collect mv r tids
+                   Nothing -> collect mv a tids
 
           killAll = mapM killThread
 
