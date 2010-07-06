@@ -32,24 +32,24 @@ import Control.Concurrent (forkIO, killThread)
 import qualified Control.Exception as C
 import Control.Monad
 import System.IO
-import Control.Concurrent.MVar (takeMVar, putMVar, newEmptyMVar)
+import Control.Concurrent.Chan (readChan, writeChan, newChan)
 
 data Return a = Stop a
               | Continue a
 
 pfoldA :: (a -> b -> Return a) -> a -> [IO b] -> IO a
-pfoldA f e ios = do mv <- newEmptyMVar 
+pfoldA f e ios = do mv <- newChan
                     C.bracket
                          (mapM (spwn mv) ios) -- spawned children are blocked from asynchrounous exceptions, only the given io from ios is unblocked per child
                          killAll
                          (collect mv e)
     where spwn mv io = forkIO $ do res <- Just `liftM` evalIO `C.catch` (\ (_ :: C.SomeException) -> return Nothing)
-                                   putMVar mv res
+                                   writeChan mv res
               where evalIO = C.unblock $ io >>= C.evaluate
 
           collect _  a  []       = return a
           collect mv a  (_:tids) = 
-              do res <- takeMVar mv
+              do res <- readChan mv
                  case res of 
                    Just b  -> case f a b of 
                                Stop r     -> return r
