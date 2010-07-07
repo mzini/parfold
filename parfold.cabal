@@ -1,5 +1,5 @@
 Name:               parfold
-Version:            0.5
+Version:            0.6
 Synopsis:           Parallel folds
 Description:
    Small but convenient abstraction for concurrent programming
