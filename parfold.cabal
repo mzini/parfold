@@ -10,7 +10,7 @@ Author:             Martin Avanzini <martin.avanzini@uibk.ac.at>,
                     Andreas Schnabl <andreas.schnabl@uibk.ac.at>
 Category:           Concurrency
 Maintainer:         Martin Avanzini <martin.avanzini@uibk.ac.at>
-Stability:          Experimental
+Stability:          Stable
 License:            LGPL
 License-file:       COPYING.LESSER
 Homepage:           http://cl-informatik.uibk.ac.at/software/tct/
