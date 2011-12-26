@@ -105,6 +105,7 @@ par ma mb = do Just (Right r) <- pfoldA plus Nothing [ Left `liftM` ma
     where plus Nothing                 b         = Continue $ Just $ Left b
           plus (Just (Left (Left a)))  (Right b) = Stop $ Just $ Right (a, b)
           plus (Just (Left (Right b))) (Left a)  = Stop $ Just $ Right (a, b)
+          plus _                       _         = Stop $ error "unexpected arguments to Control.Concurrent.PFold.par, subfunction plus"
   
 alt :: IO a -> [IO a] -> IO a
 alt m ms = do Just r <- pfoldA plus Nothing (m:ms)
