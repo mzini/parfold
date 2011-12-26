@@ -1,25 +1,30 @@
 Name:               parfold
-Version:            0.7
+Version:            0.9
 Synopsis:           Parallel folds
 Description:
-   Small but convenient abstraction for concurrent programming
+   Small but convenient abstraction for concurrent programming that 
+   models a form of parallel fold for associative operators.
 
-Author:             Martin Avanzini,
-                    Georg Moser,
-                    Andreas Schnabl
+Author:             Martin Avanzini <martin.avanzini@uibk.ac.at>,
+                    Georg Moser <georg.moser@uibk.ac.at>,
+                    Andreas Schnabl <andreas.schnabl@uibk.ac.at>
 Category:           Concurrency
 Maintainer:         Martin Avanzini <martin.avanzini@uibk.ac.at>
 Stability:          Experimental
 License:            LGPL
 License-file:       COPYING.LESSER
 Homepage:           http://cl-informatik.uibk.ac.at/software/tct/
-
 cabal-version:      >= 1.6
 build-type:	    Simple
 
 library
- exposed-modules:   Control.Concurrent.PFold
-                    Control.Concurrent.Utils
-                    Control.Concurrent.AbortThread
- build-depends:     base>=4, parallel, mtl, process
- ghc-options:       -Wall -threaded -O2
+ exposed-modules:   
+  Control.Concurrent.PFold
+  Control.Concurrent.Utils
+ build-depends:     
+  base == 4.*, 
+  parallel == 3.2.*, 
+  mtl ==2.0.*, 
+  process ==1.0.1.*
+ ghc-options:       
+  -Wall -threaded -O2

@@ -1,41 +1,71 @@
+--------------------------------------------------------------------------------
+-- | 
+-- Module      :  Control.Concurrent.PFold
+-- Copyright   :  (c) Martin Avanzini <martin.avanzini@uibk.ac.at>, 
+--                Georg Moser <georg.moser@uibk.ac.at>, 
+--                Andreas Schnabl <andreas.schnabl@uibk.ac.at>,
+-- License     :  LGPL (see COPYING)
+--
+-- Maintainer  :  Martin Avanzini <martin.avanzini@uibk.ac.at>
+-- Stability   :  stable
+-- Portability :  unportable      
+-- 
+-- This module provides implements /parallel folding/ of associative 
+-- operators, and some convenience utilities implemented on top of it.
+--------------------------------------------------------------------------------
 {-# LANGUAGE ScopedTypeVariables #-}
-{-
-This file is part of the Haskell Parfold Library.
-
-The Haskell Parfold Library is free software: you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-The Haskell Parfold Library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public License
-along with the Haskell Parfold Library.  If not, see <http://www.gnu.org/licenses/>.
--}
 
 module Control.Concurrent.PFold 
- ( Return (..)
- , pfoldA
- , pfold
+ ( 
+   pfold
+   -- | The call 'pfold f a ms' executes the io actions ms in 
+   -- parallel, and collects the results of using the function 
+   -- @f@ and the initial value @a@. No guarantee on the order
+   -- of the folding is given, and thus @f@ should be associative.
+   --
+   -- If an io action from 'ms' receives an uncought exception, 
+   -- then the specific io action is silently ignored. 
+ , pfoldA   
+   -- | Same as 'pfold' but allows the folding operator to abort 
+   -- the computation and return a result immediately. All pending
+   -- spawned io actions are cilled.
+ , Return (..)
+   -- | The result type of the folding function for the 'pfoldA'.
+   
+   -- * Utilities Implemented on top of 'pfold'
+   -- | The following actions are all implemented on top of 
+   -- 'pfoldA', hence again actions that receive an uncaught 
+   -- exception are silently ignored
  , fastest
+   -- | The call 'fastest a ms' executes the io actions 'ms' in parallel, 
+   -- and returns the first computed result, or 'a' if the io actions 'ms'
+   -- are empty.
  , fastestSatisfying
- , choice
- , par
+   -- | Same as fastest, but additionally checks a predicate on the returned
+   -- result. If the predicate does not hold, the result is discarded.
  , alt
+   -- | The call 'alt m ms' executes all actions in 'm:ms' in parallel, 
+   -- and returns the fastest computed result. 
+ , choice
+   -- | 'choice a b == alt a [b]'
+ , par
+   -- | 'par ma mb' runs the action 'ma' and 'mb' in parallel, returning their result.
+   -- The actions 'ma' and 'mb' need to properly catch all exceptions, or otherwise
+   -- the call might hang indefinately
  , (<+>)
- , (<|>))
+   -- | Infix version of 'par'.
+   
+ , (<|>)
+   -- | Infix version of 'choice'.
+ )   
 where
 import Control.Concurrent (forkIO, killThread)
 import qualified Control.Exception as C
 import Control.Monad
-import System.IO
 import Control.Concurrent.Chan (readChan, writeChan, newChan)
 
-data Return a = Stop a
-              | Continue a
+data Return a = Stop a -- ^ Stop computation of other subprocesses
+              | Continue a -- ^ Usual return behaviour
 
 pfoldA :: (a -> b -> Return a) -> a -> [IO b] -> IO a
 pfoldA f e ios = do mv <- newChan
@@ -85,5 +115,8 @@ alt m ms = do Just r <- pfoldA plus Nothing (m:ms)
 choice :: IO a -> IO a -> IO a
 choice a b = alt a [b]
 
+(<+>) :: forall a b. IO a -> IO b -> IO (a, b)
 (<+>) = par
+
+(<|>) :: forall a. IO a -> IO a -> IO a
 (<|>) = choice

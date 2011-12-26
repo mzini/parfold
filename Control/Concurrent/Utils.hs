@@ -1,7 +1,33 @@
+--------------------------------------------------------------------------------
+-- | 
+-- Module      :  Control.Concurrent.Util
+-- Copyright   :  (c) Martin Avanzini <martin.avanzini@uibk.ac.at>, 
+--                Georg Moser <georg.moser@uibk.ac.at>, 
+--                Andreas Schnabl <andreas.schnabl@uibk.ac.at>,
+-- License     :  LGPL (see COPYING)
+--
+-- Maintainer  :  Martin Avanzini <martin.avanzini@uibk.ac.at>
+-- Stability   :  stable
+-- Portability :  unportable      
+-- 
+-- This module provides implements utilities for concurrent programming.
+--------------------------------------------------------------------------------
+
 module Control.Concurrent.Utils 
     ( spawn
-    , threadKilled
+      -- | The call 'spawn command args input' 
+      -- spawns the unix command @command@ on arguments @args@ and input @input@.
+      -- It returns the triple @(exit,out,err)@ where @exit@ is the 'ExitCode' 
+      -- of the command, @out@ the standard and @err@ the error output
     , timedKill
+      -- | 'timedKill t m' executes the io action 'm' in the current thread.
+      -- It returns 'Just r' where 'r' is the result of the io action if 
+      -- 'm' returns before 't' /microseconds/. If 'm' does not return in that
+      -- time, the call 'timedKill t m' sends a 'C.ThreadKilled' to 'm' and 
+      -- returns 'Nothing'. Note that if 'm' may catch the 'C.ThreadKilled', 
+      -- and ignore the timeout 't' this way.
+    , threadKilled
+      -- | Returns 'Just ()' iff the given exception is a 'C.ThreadKilled' action      
     , solveList)
 where
 import Control.Concurrent (forkIO, forkOS, killThread, myThreadId, threadDelay)
@@ -20,7 +46,10 @@ spawn cmd args input = C.bracket createProc finalize run
     where createProc = do e <- createProcess (proc cmd args) { std_in  = CreatePipe,
                                                               std_out = CreatePipe,
                                                               std_err = CreatePipe }
-                          case e of (Just inh, Just outh, Just errh, pid) -> return (inh, outh, errh, pid) 
+                          case e of 
+                            (Just inh, Just outh, Just errh, pid) 
+                              -> return (inh, outh, errh, pid) 
+                            _ -> error "Control.Concurrent.Utils.spawn could not create process"
 
           retrying d m = do s <- try $ m
                             case s of 
@@ -36,7 +65,7 @@ spawn cmd args input = C.bracket createProc finalize run
               do output <- hGetContents outh
                  errors <- hGetContents errh
                  outMVar <- newEmptyMVar
-                 forkOS $ C.evaluate (length output) >> putMVar outMVar ()
+                 _ <- forkOS $ C.evaluate (length output) >> putMVar outMVar ()
                  when (not (null input)) $ do hPutStr inh input; hFlush inh;
                  hClose inh
                  takeMVar outMVar
@@ -53,6 +82,7 @@ timedKill n m = do pid <- myThreadId
                           killThread
                           (const $ Just `liftM` m))
 
+threadKilled :: C.SomeException -> Maybe ()
 threadKilled e = case C.fromException e of 
                    Just C.ThreadKilled -> Just ()
                    _ -> Nothing
