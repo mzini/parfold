@@ -24,7 +24,7 @@ library
  build-depends:     
   base == 4.*, 
   parallel == 3.2.*, 
-  mtl ==2.0.*, 
-  process ==1.0.1.*
+  mtl == 2.0.*, 
+  process == 1.1.*
  ghc-options:       
   -Wall -threaded -O2
