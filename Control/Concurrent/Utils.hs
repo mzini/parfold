@@ -58,7 +58,7 @@ spawn cmd args input = C.bracket createProc finalize run
                               Right a -> return a
           finalize (inh, outh, errh, pid) = 
               do _ <- retrying "terminate" $ terminateProcess pid
-                 _ <- retrying "wait" $ waitForProcess pid
+                 _ <- try $ waitForProcess pid
                  hClose inh >> hClose outh >> hClose errh
                                                
           run (inh, outh, errh, pid) = 
