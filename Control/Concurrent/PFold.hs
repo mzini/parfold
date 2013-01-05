@@ -89,11 +89,11 @@ pfoldA f e ios = do
             Nothing -> collect a tids
         
     tids <- spwn `mapM` ios
-    _ <- forkIO $ collect e tids >>= putMVar mv
+    _ <- forkIO $ collect e tids >>= putMVar mv >> killAll tids
     reset $ readMVar mv `catchA` (killAll tids >> readMVar mv)
     
   where 
-    killAll = mapM killThread
+    killAll = mapM_ killThread
     m `catchA` h = m `C.catch` (\ (_ :: C.SomeException) -> h)
 
 pfold :: (a -> b -> a) -> a -> [IO b] -> IO a
