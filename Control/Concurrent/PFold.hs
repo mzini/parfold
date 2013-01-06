@@ -63,38 +63,39 @@ import Control.Concurrent (forkIO, killThread)
 import qualified Control.Exception as C
 import Control.Monad
 import Control.Concurrent.Chan (readChan, writeChan, newChan)
-import Control.Concurrent.MVar (readMVar, putMVar, newEmptyMVar)
 
 data Return a = Stop a -- ^ Stop computation of other subprocesses
               | Continue a -- ^ Usual return behaviour
 
-
 pfoldA :: (a -> b -> Return a) -> a -> [IO b] -> IO a
-pfoldA f e ios = do 
-  chan <- newChan
-  mv <- newEmptyMVar
-  C.mask $ \reset -> do
-    let spwn io = forkIO $ do
-          res <- reset (Just `liftM` io >>= C.evaluate) `catchA` (return Nothing)
-          writeChan chan res    
-          
-        collect a [] = return a
-        collect a (_:tids) = do 
-          res <- readChan chan
-          case res of 
-            Just b  -> 
-              case f a b of 
-                Stop r     -> return r
-                Continue r -> collect r tids
-            Nothing -> collect a tids
-        
-    tids <- spwn `mapM` ios
-    _ <- forkIO $ collect e tids >>= putMVar mv
-    reset $ readMVar mv `catchA` (killAll tids >> readMVar mv)
-    
-  where 
-    killAll = mapM killThread
-    m `catchA` h = m `C.catch` (\ (_ :: C.SomeException) -> h)
+pfoldA f e ios = do mv <- newChan
+                    C.bracket
+                         (mapM (spwn mv) ios) -- spawned children are blocked from asynchrounous exceptions, only the given io from ios is unblocked per child
+                         killAll
+                         (collect mv e)
+    where spwn mv io = forkIO $ do res <- Just `liftM` evalIO `C.catch` (\ (_ :: C.SomeException) -> return Nothing)
+                                   writeChan mv res
+              where evalIO = C.unblock $ io >>= C.evaluate
+
+          collect _  a  []       = return a
+          collect mv a  (_:tids) = handleKilled a m
+            where m = do 
+                    res <- readChan mv
+                    case res of 
+                      Just b  -> 
+                        case f a b of 
+                          Stop r     -> return r
+                          Continue r -> collect mv r tids
+                      Nothing -> collect mv a tids
+
+          killAll = mapM killThread
+
+          handleKilled a = C.handleJust threadKilled (const $ return a)
+          threadKilled :: C.SomeException -> Maybe ()
+          threadKilled er = 
+            case C.fromException er of 
+              Just C.ThreadKilled -> Just ()
+              _ -> Nothing
 
 pfold :: (a -> b -> a) -> a -> [IO b] -> IO a
 pfold f = pfoldA $ \ a b -> Continue (f a b)
