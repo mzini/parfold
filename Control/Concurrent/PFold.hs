@@ -78,24 +78,15 @@ pfoldA f e ios = do mv <- newChan
               where evalIO = C.unblock $ io >>= C.evaluate
 
           collect _  a  []       = return a
-          collect mv a  (_:tids) = handleKilled a m
-            where m = do 
-                    res <- readChan mv
-                    case res of 
-                      Just b  -> 
-                        case f a b of 
-                          Stop r     -> return r
-                          Continue r -> collect mv r tids
-                      Nothing -> collect mv a tids
+          collect mv a  (_:tids) = 
+              do res <- readChan mv
+                 case res of 
+                   Just b  -> case f a b of 
+                               Stop r     -> return r
+                               Continue r -> collect mv r tids
+                   Nothing -> collect mv a tids
 
           killAll = mapM killThread
-
-          handleKilled a = C.handleJust threadKilled (const $ return a)
-          threadKilled :: C.SomeException -> Maybe ()
-          threadKilled er = 
-            case C.fromException er of 
-              Just C.ThreadKilled -> Just ()
-              _ -> Nothing
 
 pfold :: (a -> b -> a) -> a -> [IO b] -> IO a
 pfold f = pfoldA $ \ a b -> Continue (f a b)
