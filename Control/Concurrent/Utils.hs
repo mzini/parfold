@@ -28,7 +28,7 @@ import Control.Monad (foldM)
 import Control.Monad.Trans (liftIO)
 import System.Exit	( ExitCode(..) )
 import System.IO
-import System.IO.Error (try)
+import System.IO.Error (tryIOError)
 import System.Process
 import qualified Control.Exception as C
 
@@ -44,9 +44,9 @@ spawn cmd args input = C.bracket createProc finalize run
               _ -> error "Control.Concurrent.Utils.spawn could not create process"
 
           finalize (inh, outh, errh, pid) = do 
-            _ <- try $ terminateProcess pid
-            _ <- try $ waitForProcess pid
-            _ <- try $ hClose inh -- catch EPIPE errors (hClose implies hFlush)
+            _ <- tryIOError $ terminateProcess pid
+            _ <- tryIOError $ waitForProcess pid
+            _ <- tryIOError $ hClose inh -- catch EPIPE errors (hClose implies hFlush)
             hClose outh >> hClose errh
                                                
           run (inh, outh, errh, pid) = do 
